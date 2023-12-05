@@ -1,0 +1,44 @@
+## C++
+# 编译产生的文件和文件夹
+build/
+bin/
+*.out
+*.o
+*.obj
+
+# CMake 生成的文件夹
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+CMakeSettings.json
+CMakeUserPresets.json
+
+# Visual Studio Code 配置文件
+.vscode/
+
+# 编译器和编辑器临时文件
+*.swp
+*.swo
+*.swn
+
+# 可执行文件
+*.exe
+
+# Android 构建产物
+build/
+app/build/
+*.apk
+*.ap_
+
+## Android
+# Gradle 生成的文件
+.gradle/
+local.properties
+
+# Android Studio 配置文件
+.idea/
+
+# 依赖库的缓存
+*.iml
+.gradle/
+build/
