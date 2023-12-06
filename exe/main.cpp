@@ -1,39 +1,141 @@
+/*
+ * 项目名称: AnkiCard
+ * 文件名称: main.cpp
+ * 创建日期: 2023-12-05
+ * 作者: Harry Sun
+ * 项目描述: 跨平台 PC 和 Android 的 Anki 卡片
+ *
+ * 许可协议: 你可以自由使用、修改和分发这个代码，无需特殊许可。
+ *
+ * 免责声明: 仅供学习。作者对使用本软件所产生的任何损失或问题概不负责。
+ */
+
 #include <iostream>
 #include <winsock2.h>
-#include "AnkiSocket.cpp"
+#include <sstream>
+#include <string>
+#include <include/AnkiSocket.h>
 
-int main(int argc, char* argv[]){
-    if(argc < 2){
+/**
+ * 地址检查
+ *
+ * 检查是否是IPV4类型的地址
+ *
+ * @param str (const char*) 地址
+ * @return (bool) 地址是否是IPV4
+ */
+bool isIPv4Address(const char *str)
+{
+    if (str == nullptr)
+    {
+        return false; // 如果字符串为空指针，则不是合法的IPv4地址
+    }
+
+    int count = 0; // 用于计数点的数量
+    std::istringstream iss(str);
+    std::string token;
+
+    while (std::getline(iss, token, '.'))
+    {
+        int num = std::stoi(token); // 将字符串转换为整数
+        if (num < 0 || num > 255)
+        {
+            return false; // 检查每个数字是否在合法范围内
+        }
+        count++;
+    }
+
+    return (count == 4); // IPv4地址应该有4个数字
+}
+
+/**
+ * 端口检查
+ *
+ * 检查是否是有效端口
+ *
+ * @param str (const char*) 端口
+ * @return (bool) 地址是否是有效端口
+ */
+bool isValidPort(const std::string &str)
+{
+    if (str.empty())
+    {
+        return false; // 空字符串不是有效的端口号
+    }
+
+    for (char c : str)
+    {
+        if (!std::isdigit(c))
+        {
+            return false; // 字符串包含非数字字符，不是有效的端口号
+        }
+    }
+
+    int port = std::stoi(str);           // 将字符串转换为整数
+    return (port >= 0 && port <= 65535); // 检查端口号范围
+}
+
+/**
+ * Main函数
+ *
+ * 接受server或者client的命令，做出相应动作
+ *
+ */
+int main(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
         std::cout << "Please input the command you need!" << std::endl;
         return 1;
     }
-    if(argc > 2){
+    if (argc > 4)
+    {
         std::cout << "The number of command is not supported!" << std::endl;
         return 1;
-    }    
+    }
 
-
-    WSADATA wsaData;                                        //定义wsa数据
-    if(WSAStartup( MAKEWORD(2, 2), &wsaData) != 0){         //传入版本、数据
+    WSADATA wsaData; // 定义wsa数据
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+    { // 传入版本、数据
         std::cout << "WSA Start Up Error!" << std::endl;
         return 1;
-    }          
-
-
-    if(strcmp(argv[1], "server") == 0){           //直接用argv[1] == "server"不行，会比较指针地址而不是值。
-        AnkiSocket ankiSocket("server");
     }
-    else if (strcmp(argv[1], "client") == 0)
-    {
-        AnkiSocket ankiSocket("client");
-    }
-    else{
+
+    char *command = argv[1];
+    if (strcmp(command, "server") != 0 && strcmp(command, "client") != 0)
+    { // 判断条件无法直接用argv[1] == "server"，会比较指针地址而不是值。
         std::cout << "Can't detect the command \"" << argv[1] << "\"" << std::endl;
         return 1;
     }
-    
+    AnkiSocket ankiSocket;
 
+    if (argc > 2)
+    {
+        if (isIPv4Address(argv[2]))
+        {
+            ankiSocket.setSocketAddr(argv[2]);
+        }
+        else
+        {
+            std::cout << "Input Addr Type Error!" << std::endl;
+            return 1;
+        }
+    }
 
-    
+    if (argc > 3)
+    {
+        if (isValidPort(argv[3]))
+        {
+            ankiSocket.setSocketPort(std::stoi(argv[3]));
+        }
+        else
+        {
+            std::cout << "Input Port Type Error!" << std::endl;
+            return 1;
+        }
+    }
+
+    ankiSocket.startSocket(command);
+
     return 0;
 }
