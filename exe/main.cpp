@@ -10,11 +10,7 @@
  * 免责声明: 仅供学习。作者对使用本软件所产生的任何损失或问题概不负责。
  */
 
-#include <iostream>
-#include <winsock2.h>
-#include <sstream>
-#include <string>
-#include <include/AnkiSocket.h>
+#include "include/AnkiSocket.h"
 
 /**
  * 地址检查

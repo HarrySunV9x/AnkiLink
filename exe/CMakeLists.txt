@@ -1,6 +1,9 @@
 # 设置CMake的最低版本要求
 cmake_minimum_required(VERSION 3.10)
 
+SET(CMAKE_C_COMPILER "C:/msys64/mingw64/bin/gcc.exe")
+SET(CMAKE_CXX_COMPILER "C:/msys64/mingw64/bin/g++.exe")
+
 # 设置你的项目名称
 project(AnkiLink)
 
@@ -9,8 +12,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # 添加你的源文件
-add_executable(MyExecutable Main.cpp AnkiSocket.cpp)
+add_executable(AnkiLink Main.cpp AnkiSocket.cpp)
 
 # 链接库
-target_link_libraries(MyExecutable wsock32)
+target_link_libraries(AnkiLink wsock32)
 
