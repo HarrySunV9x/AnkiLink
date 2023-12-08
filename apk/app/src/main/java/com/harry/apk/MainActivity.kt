@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        println("Hello Java")
         // Example of a call to a native method
         binding.sampleText.text = stringFromJNI()
     }
@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         // Used to load the 'apk' library on application startup.
         init {
-            System.loadLibrary("apk")
+            System.loadLibrary("AnkiLink")
         }
     }
 }

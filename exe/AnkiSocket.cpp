@@ -6,6 +6,7 @@
  * 类描述: Socket具体实现
  */
 #include "include/AnkiSocket.h"
+#include <vector>
 
 #define DEFAULT_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 1120
@@ -77,9 +78,24 @@ void AnkiSocket::clientSocket()
     char szBuffer[MAXBYTE] = {0};
     int ret = recv(linkSocket, szBuffer, MAXBYTE, NULL);
     // 输出接收到的数据
-    if (ret == -1)
-    {
-        std::cout << "Receive nothing!" << std::endl;
+    if (ret == SOCKET_ERROR)
+    { // 当返回值为-1，代表连接失败做错误处理
+        int wsaLastError = WSAGetLastError();
+        std::vector<char> errorText(256);
+        FormatMessageA(
+            FORMAT_MESSAGE_FROM_SYSTEM,
+            nullptr,
+            wsaLastError,
+            0,
+            errorText.data(),
+            errorText.size(),
+            nullptr);
+
+        std::cout << "Socket Error: " << wsaLastError << " - " << errorText.data() << std::endl;
+    }
+    else if (ret == 0)
+    { // TCP 协议确保数据的可靠传输。在实际应用中，接收到长度为零的数据包通常被视为连接终止的信号。在socket客户端场景下这是不正常的
+        std::cout << "Socket Error: Remoto close the connect!" << std::endl;
     }
     else
     {
