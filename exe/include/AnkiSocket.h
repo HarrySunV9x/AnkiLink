@@ -9,6 +9,7 @@
 #include <iostream>
 #include <winsock2.h>
 #include <sstream>
+#include <fstream>
 #include <string>
 
 class AnkiSocket
