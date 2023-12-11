@@ -96,9 +96,18 @@ void AnkiSocket::serverSocket()
     int nSize = sizeof(SOCKADDR);
     SOCKET clntSock = accept(linkSocket, (SOCKADDR *)&clntAddr, &nSize);
 
-    char buffer[1024] = {0};
-    std::ofstream outfile("received_file.txt", std::ofstream::binary);
-
+    // 接收文件名
+    char fileNameBuffer[260]; // 假定文件名不会超过260个字符
+    int fileNameLength = recv(clntSock, fileNameBuffer, 260, 0);
+    if (fileNameLength <= 0) {
+        // 错误处理
+        std::cerr << "Failed to receive file name." << std::endl;
+        closesocket(clntSock);
+        return;
+    }
+    std::string receivedFileName = fileNameBuffer;
+    std::ofstream outfile(receivedFileName, std::ofstream::binary);
+    
     // 打开文件时的错误处理
     if (!outfile)
     {
@@ -109,6 +118,7 @@ void AnkiSocket::serverSocket()
 
     // 从socket读取数据并写入文件
     int valread;
+    char buffer[1024] = {0};
     while ((valread = recv(clntSock, buffer, 1024, 0)) > 0)
     {
         outfile.write(buffer, valread);
@@ -163,6 +173,17 @@ void AnkiSocket::clientSocket()
         return; // 退出函数
         // 使用ofn.lpstrFile作为文件路径
     }
+
+    // 发送文件名
+    std::string fileName = ofn.lpstrFile; // 获取完整文件路径
+    auto lastSlash = fileName.find_last_of("\\/");
+    if (lastSlash != std::string::npos) {
+        fileName = fileName.substr(lastSlash + 1); // 提取文件名
+    }
+    send(linkSocket, fileName.c_str(), fileName.size() + 1, 0); // 发送文件名
+    Sleep(100); // 稍微等待，确保文件名被正确接收
+
+
 
     std::ifstream infile(ofn.lpstrFile, std::ifstream::binary);
     if (!infile)
