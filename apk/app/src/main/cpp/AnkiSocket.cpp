@@ -9,7 +9,8 @@ AnkiSocket::AnkiSocket() {
     //创建套接字
     serv_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (serv_sock == -1) {
-        __android_log_print(ANDROID_LOG_ERROR, "AnkiLink", "Socket creation failed: %s", strerror(errno));
+        __android_log_print(ANDROID_LOG_ERROR, "AnkiLink", "Socket creation failed: %s",
+                            strerror(errno));
         return;
     }
     __android_log_print(ANDROID_LOG_INFO, "AnkiLink", "Socket created successfully");
@@ -58,7 +59,8 @@ void AnkiSocket::ReceiveSocket() {
     char fileNameBuffer[260];
     int fileNameLength = recv(clnt_sock, fileNameBuffer, 260, 0);
     if (fileNameLength <= 0) {
-        __android_log_print(ANDROID_LOG_ERROR, "AnkiLink", "Failed to receive file name: %s", strerror(errno));
+        __android_log_print(ANDROID_LOG_ERROR, "AnkiLink", "Failed to receive file name: %s",
+                            strerror(errno));
         close(clnt_sock);
         return;
     }
@@ -72,7 +74,8 @@ void AnkiSocket::ReceiveSocket() {
 
     // 检查文件是否成功打开
     if (!outfile) {
-        __android_log_print(ANDROID_LOG_ERROR, "AnkiLink", "Cannot open file: %s", fullPath.c_str());
+        __android_log_print(ANDROID_LOG_ERROR, "AnkiLink", "Cannot open file: %s",
+                            fullPath.c_str());
         close(clnt_sock);
         return;
     }
@@ -86,7 +89,8 @@ void AnkiSocket::ReceiveSocket() {
 
     // 检查数据接收是否有错误
     if (valread < 0) {
-        __android_log_print(ANDROID_LOG_ERROR, "AnkiLink", "Error receiving data: %s", strerror(errno));
+        __android_log_print(ANDROID_LOG_ERROR, "AnkiLink", "Error receiving data: %s",
+                            strerror(errno));
         outfile.close();
         close(clnt_sock);
         return;

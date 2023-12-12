@@ -51,7 +51,7 @@ public:
 private:
     SOCKET linkSocket;           // socket对象
     struct sockaddr_in sockAddr; // socket数据
-    
+
     /**
      * 初始化socket对象与数据
      *
