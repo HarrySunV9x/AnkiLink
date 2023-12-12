@@ -72,28 +72,36 @@ bool isValidPort(const std::string &str)
 }
 
 /**
- * Main函数
+ * 打印用法
  *
- * 接受server或者client的命令，做出相应动作
+ * 检查是否是有效端口
  *
+ */
+void printUsage()
+{
+    std::cout << "Usage: AnkiLink [server|client] [IP Address] [Port]" << std::endl;
+    std::cout << "Options:" << std::endl;
+    std::cout << "  server: Start the server." << std::endl;
+    std::cout << "  client: Start the client." << std::endl;
+    std::cout << "  IP Address: Optional. Set the IP address to connect to." << std::endl;
+    std::cout << "  Port: Optional. Set the port for communication." << std::endl;
+}
+
+/**
+ * 主函数
+ *
+ * 接受server或client的命令，执行相应动作
+ *
+ * @param argc (int) 命令行参数数量
+ * @param argv (char* []) 命令行参数数组
+ * @return (int) 程序退出码
  */
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
-    {
-        std::cout << "Please input the command you need!" << std::endl;
-        return 1;
-    }
-    if (argc > 4)
-    {
-        std::cout << "The number of command is not supported!" << std::endl;
-        return 1;
-    }
 
-    WSADATA wsaData; // 定义wsa数据
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-    { // 传入版本、数据
-        std::cout << "WSA Start Up Error!" << std::endl;
+    if (argc < 2 || argc > 4)
+    { // 参数检查
+        printUsage();
         return 1;
     }
 
@@ -101,9 +109,18 @@ int main(int argc, char *argv[])
     if (strcmp(command, "server") != 0 && strcmp(command, "client") != 0)
     { // 判断条件无法直接用argv[1] == "server"，会比较指针地址而不是值。
         std::cout << "Can't detect the command \"" << argv[1] << "\"" << std::endl;
+        printUsage();
         return 1;
     }
-    AnkiSocket ankiSocket;
+
+    WSADATA wsaData; // 声明wsa数据
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+    { // 传入版本、数据，启动wsaData
+        std::cout << "WSA Start Up Error!" << std::endl;
+        return 1;
+    }
+
+    AnkiSocket ankiSocket; // 声明socket
 
     if (argc > 2)
     {
@@ -113,7 +130,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            std::cout << "Input Addr Type Error!" << std::endl;
+            std::cout << "Input Address Type Error!" << std::endl;
             return 1;
         }
     }

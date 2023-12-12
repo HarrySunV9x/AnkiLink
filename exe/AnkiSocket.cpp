@@ -17,7 +17,6 @@
 // 错误消息打印函数
 void errorMessage(std::string type)
 {
-    static WSADATA wsaData;
     static int wsaLastError = WSAGetLastError();
     static std::vector<char> errorText(256);
 
@@ -39,7 +38,7 @@ void errorMessage(std::string type)
     std::cerr << "Socket " << type << " Error: " << wsaLastError << " - " << errorText.data() << std::endl;
 }
 
-static int ret; // 检查错误状态
+
 
 // 构造函数：初始化socket
 AnkiSocket::AnkiSocket()
@@ -83,15 +82,15 @@ void AnkiSocket::startSocket(char *command)
 // 使用默认值初始化socket
 void AnkiSocket::initSocket()
 {
-    linkSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); // socket对象
+    linkSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-    memset(&sockAddr, 0, sizeof(sockAddr));                // 每个字节都用0填充
-    sockAddr.sin_family = PF_INET;                         // 使用IPv4地址
-    sockAddr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS); // 具体的IP地址
-    sockAddr.sin_port = htons(DEFAULT_PORT);               // 端口
+    memset(&sockAddr, 0, sizeof(sockAddr));                // 清零
+    sockAddr.sin_family = PF_INET;                         // 设置为IPv4地址
+    sockAddr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS); // 设置IP
+    sockAddr.sin_port = htons(DEFAULT_PORT);               // 设置端口
 }
 
-// 配置并启动服务器socket
+// 服务器socket配置和启动
 void AnkiSocket::serverSocket()
 {
     bind(linkSocket, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR));
@@ -112,10 +111,10 @@ void AnkiSocket::serverSocket()
         closesocket(clntSock);
         return;
     }
+
+    // 文件接收和写入
     std::string receivedFileName = fileNameBuffer;
     std::ofstream outfile(receivedFileName, std::ofstream::binary);
-
-    // 打开文件时的错误处理
     if (!outfile)
     {
         std::cerr << "Error: Cannot open 'received_file.txt' for writing." << std::endl;
@@ -150,10 +149,10 @@ void AnkiSocket::clientSocket()
 {
     char buffer[1024] = {0};
     const char *END_OF_FILE_MARKER = "FILE_TRANSFER_COMPLETE";
-    OPENFILENAME ofn;
-    char szFile[260]; // 存储文件名
+    OPENFILENAME ofn; // Windows文件选择对话框结构
+    char szFile[260]; // 存储选中的文件名
 
-    // windows 打开文件对话框
+    // 初始化文件选择对话框
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = NULL;
@@ -167,13 +166,14 @@ void AnkiSocket::clientSocket()
     ofn.lpstrInitialDir = NULL;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
+    // 连接到服务器
     ret = connect(linkSocket, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR));
     if (ret == SOCKET_ERROR)
     { // 当返回值为-1，代表连接失败进行错误处理
         errorMessage("Connect");
     }
 
-    // 打开文件
+    // 打开文件选择对话框并获取文件名
     if (GetOpenFileName(&ofn) == false)
     {
         std::cerr << "File Open Error: File not found or cannot be opened." << std::endl;
@@ -181,7 +181,7 @@ void AnkiSocket::clientSocket()
         // 使用ofn.lpstrFile作为文件路径
     }
 
-    // 发送文件名
+    // 发送文件名到服务器
     std::string fileName = ofn.lpstrFile; // 获取完整文件路径
     auto lastSlash = fileName.find_last_of("\\/");
     if (lastSlash != std::string::npos)
@@ -191,6 +191,7 @@ void AnkiSocket::clientSocket()
     send(linkSocket, fileName.c_str(), fileName.size() + 1, 0); // 发送文件名
     Sleep(100);                                                 // 稍微等待，确保文件名被正确接收
 
+    // 打开并读取文件
     std::ifstream infile(ofn.lpstrFile, std::ifstream::binary);
     if (!infile)
     {
@@ -199,14 +200,12 @@ void AnkiSocket::clientSocket()
         return; // 退出函数
     }
 
-    // 设置输入文件流的读取位置到文件末尾
-    infile.seekg(0, infile.end);
-    // 获取文件的总大小
-    long totalSize = infile.tellg();
-    // 重新设置文件流的读取位置到文件开始
-    infile.seekg(0, infile.beg);
-    // 初始化已发送的数据总量为0
-    long totalSent = 0;
+    // 文件传输逻辑
+    infile.seekg(0, infile.end);     // 设置输入文件流的读取位置到文件末尾
+    long totalSize = infile.tellg(); // 获取文件的总大小
+    infile.seekg(0, infile.beg);     // 重新设置文件流的读取位置到文件开始
+    infile.seekg(0, infile.beg);     // 重新设置文件流的读取位置到文件开始
+    long totalSent = 0;              // 初始化已发送的数据总量为0
 
     // 循环读取文件并发送数据
     while (true)
@@ -266,7 +265,7 @@ void AnkiSocket::clientSocket()
         errorMessage("Recive");
     }
     else if (ret == 0)
-    {   // TCP 协议确保数据的可靠传输。在实际应用中，接收到长度为零的数据包通常被视为连接终止的信号。
+    { // TCP 协议确保数据的可靠传输。在实际应用中，接收到长度为零的数据包通常被视为连接终止的信号。
         // 根据本次应用的场景，对于Windows server来说，在socket客户端场景下这是不正常的。
         // 而Android（Linux）服务器场景，文件在接收完后会在finish帧后直接返回一个ack帧关闭连接，因此可能是正常的
         // 具体原理暂时不过多研究，有时间可考虑在stackoverfloww上提问下~
