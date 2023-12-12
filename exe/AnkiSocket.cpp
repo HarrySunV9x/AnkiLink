@@ -17,16 +17,14 @@
 // 错误消息打印函数
 void errorMessage(std::string type)
 {
-    static int wsaLastError = WSAGetLastError();
-    static std::vector<char> errorText(256);
-
-    wsaLastError = WSAGetLastError();
+    int wsaLastError = WSAGetLastError();
     if (wsaLastError == 0)
     {
         std::cerr << "Unidentified Problem, please check the remote." << std::endl;
         return;
     }
 
+    std::vector<char> errorText(256);
     FormatMessageA(
         FORMAT_MESSAGE_FROM_SYSTEM,
         nullptr,
@@ -37,8 +35,6 @@ void errorMessage(std::string type)
         nullptr);
     std::cerr << "Socket " << type << " Error: " << wsaLastError << " - " << errorText.data() << std::endl;
 }
-
-
 
 // 构造函数：初始化socket
 AnkiSocket::AnkiSocket()
@@ -82,31 +78,55 @@ void AnkiSocket::startSocket(char *command)
 // 使用默认值初始化socket
 void AnkiSocket::initSocket()
 {
+    // 创建套接字。PF_INET代表IPv4协议族，SOCK_STREAM表示TCP连接，IPPROTO_TCP指定使用TCP协议
     linkSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (linkSocket == INVALID_SOCKET)
+    {
+        errorMessage("Socket");
+        return;
+    }
 
-    memset(&sockAddr, 0, sizeof(sockAddr));                // 清零
-    sockAddr.sin_family = PF_INET;                         // 设置为IPv4地址
-    sockAddr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS); // 设置IP
-    sockAddr.sin_port = htons(DEFAULT_PORT);               // 设置端口
+    memset(&sockAddr, 0, sizeof(sockAddr));                // 确保sockAddr结构被清零。memset用于填充内存块，这里用0填充
+    sockAddr.sin_family = PF_INET;                         // 设置套接字地址的家族为IPv4
+    sockAddr.sin_addr.s_addr = inet_addr(DEFAULT_ADDRESS); // 设置IP地址。inet_addr将点分十进制的IP地址转换为网络字节顺序
+    sockAddr.sin_port = htons(DEFAULT_PORT);               // 设置端口号。htons确保端口号的字节顺序符合网络标准
 }
 
 // 服务器socket配置和启动
 void AnkiSocket::serverSocket()
 {
-    bind(linkSocket, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR));
-    listen(linkSocket, 20);
+    // 绑定套接字
+    if (bind(linkSocket, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
+    {
+        errorMessage("Bind failed");
+        closesocket(linkSocket);
+        return;
+    }
 
-    // 接受客户端连接
+    // 监听套接字，设置最大等待连接数
+    if (listen(linkSocket, 20) == SOCKET_ERROR)
+    {
+        errorMessage("Listen failed");
+        closesocket(linkSocket);
+        return;
+    }
+
+    // 接受客户端连接请求
     SOCKADDR clntAddr;
     int nSize = sizeof(SOCKADDR);
     SOCKET clntSock = accept(linkSocket, (SOCKADDR *)&clntAddr, &nSize);
+    if (clntSock == INVALID_SOCKET)
+    {
+        errorMessage("Accept failed");
+        closesocket(linkSocket);
+        return;
+    }
 
     // 接收文件名
     char fileNameBuffer[260]; // 假定文件名不会超过260个字符
     int fileNameLength = recv(clntSock, fileNameBuffer, 260, 0);
     if (fileNameLength <= 0)
     {
-        // 错误处理
         std::cerr << "Failed to receive file name." << std::endl;
         closesocket(clntSock);
         return;
@@ -133,7 +153,9 @@ void AnkiSocket::serverSocket()
     // 读取socket时的错误处理
     if (valread == SOCKET_ERROR)
     {
-        errorMessage("Recive");
+        errorMessage("Receive");
+        outfile.close();
+        closesocket(clntSock);
         return;
     }
 
@@ -167,18 +189,20 @@ void AnkiSocket::clientSocket()
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
     // 连接到服务器
-    ret = connect(linkSocket, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR));
-    if (ret == SOCKET_ERROR)
-    { // 当返回值为-1，代表连接失败进行错误处理
+    if (connect(linkSocket, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
+    {
         errorMessage("Connect");
+        closesocket(linkSocket);
+        return;
     }
 
     // 打开文件选择对话框并获取文件名
     if (GetOpenFileName(&ofn) == false)
     {
-        std::cerr << "File Open Error: File not found or cannot be opened." << std::endl;
-        return; // 退出函数
         // 使用ofn.lpstrFile作为文件路径
+        std::cerr << "File Open Error: File not found or cannot be opened." << std::endl;
+        closesocket(linkSocket);
+        return;
     }
 
     // 发送文件名到服务器
@@ -188,8 +212,13 @@ void AnkiSocket::clientSocket()
     {
         fileName = fileName.substr(lastSlash + 1); // 提取文件名
     }
-    send(linkSocket, fileName.c_str(), fileName.size() + 1, 0); // 发送文件名
-    Sleep(100);                                                 // 稍微等待，确保文件名被正确接收
+    if (send(linkSocket, fileName.c_str(), fileName.size() + 1, 0) == SOCKET_ERROR)
+    { // 发送文件名
+        errorMessage("Send");
+        closesocket(linkSocket);
+        return;
+    }
+    Sleep(100); // 稍微等待，确保文件名被正确接收
 
     // 打开并读取文件
     std::ifstream infile(ofn.lpstrFile, std::ifstream::binary);
@@ -203,7 +232,6 @@ void AnkiSocket::clientSocket()
     // 文件传输逻辑
     infile.seekg(0, infile.end);     // 设置输入文件流的读取位置到文件末尾
     long totalSize = infile.tellg(); // 获取文件的总大小
-    infile.seekg(0, infile.beg);     // 重新设置文件流的读取位置到文件开始
     infile.seekg(0, infile.beg);     // 重新设置文件流的读取位置到文件开始
     long totalSent = 0;              // 初始化已发送的数据总量为0
 
@@ -219,13 +247,12 @@ void AnkiSocket::clientSocket()
         if (bytes_read > 0)
         {
             // 通过套接字发送数据
-            ret = send(linkSocket, buffer, static_cast<int>(bytes_read), 0);
-            // 检查是否发送错误
-            if (ret == SOCKET_ERROR)
+            if (send(linkSocket, buffer, static_cast<int>(bytes_read), 0) == SOCKET_ERROR)
             {
-                // 如果有错误，输出错误消息并返回
-                errorMessage("Send");
-                return; // 或者处理错误
+                errorMessage("Send failed");
+                infile.close();
+                closesocket(linkSocket);
+                return;
             }
             // 累加已发送的数据量
             totalSent += bytes_read;
@@ -246,11 +273,13 @@ void AnkiSocket::clientSocket()
         {
             // 如果读取失败，输出错误信息并返回
             std::cerr << "Failed to read from file." << std::endl;
+            infile.close();
+            closesocket(linkSocket);
             return;
         }
     }
 
-    std::cout << std::endl; // 完成后换行
+    std::cout << std::endl; // 进度条换行
 
     // 关闭文件和socket
     infile.close();
