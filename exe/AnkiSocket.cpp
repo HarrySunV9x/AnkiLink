@@ -82,7 +82,7 @@ void AnkiSocket::initSocket()
     linkSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (linkSocket == INVALID_SOCKET)
     {
-        errorMessage("Socket");
+        errorMessage("Create");
         return;
     }
 
@@ -98,7 +98,7 @@ void AnkiSocket::serverSocket()
     // 绑定套接字
     if (bind(linkSocket, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
     {
-        errorMessage("Bind failed");
+        errorMessage("Bind");
         closesocket(linkSocket);
         return;
     }
@@ -106,7 +106,7 @@ void AnkiSocket::serverSocket()
     // 监听套接字，设置最大等待连接数
     if (listen(linkSocket, 20) == SOCKET_ERROR)
     {
-        errorMessage("Listen failed");
+        errorMessage("Listen");
         closesocket(linkSocket);
         return;
     }
@@ -117,7 +117,7 @@ void AnkiSocket::serverSocket()
     SOCKET clntSock = accept(linkSocket, (SOCKADDR *)&clntAddr, &nSize);
     if (clntSock == INVALID_SOCKET)
     {
-        errorMessage("Accept failed");
+        errorMessage("Accept");
         closesocket(linkSocket);
         return;
     }
@@ -169,11 +169,10 @@ void AnkiSocket::serverSocket()
 // 配置并启动客户端socket
 void AnkiSocket::clientSocket()
 {
-    char buffer[1024] = {0};
-    const char *END_OF_FILE_MARKER = "FILE_TRANSFER_COMPLETE";
+    
     OPENFILENAME ofn; // Windows文件选择对话框结构
     char szFile[260]; // 存储选中的文件名
-
+    
     // 初始化文件选择对话框
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
@@ -236,6 +235,7 @@ void AnkiSocket::clientSocket()
     long totalSent = 0;              // 初始化已发送的数据总量为0
 
     // 循环读取文件并发送数据
+    char buffer[1024] = {0};
     while (true)
     {
         // 从文件中读取数据到缓冲区

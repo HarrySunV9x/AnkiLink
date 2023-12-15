@@ -4,7 +4,6 @@
 
 #include "AnkiSocket.h"
 
-// 假设您已经定义了 AnkiSocket 类
 void startSocketOperation() {
     AnkiSocket receiveFileSocket;
     receiveFileSocket.ReceiveSocket();
